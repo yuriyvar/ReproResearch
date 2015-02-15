@@ -1,0 +1,150 @@
+---
+title: "PA1_template.Rmd"
+author: "Yuriy Varvashenya"
+date: "Sunday, February 15, 2015"
+output:
+  html_document:
+    fig_height: 5.5
+    fig_width: 7.5
+---
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>. When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document.
+
+## Reproducible Research, Assignment 1
+
+### Loading and preprocessing the data
+
+The code below first loads the packages 'dplyr' and 'ggplot2' that are needed for the R code below to complete the Project Assignmen, then sets the working directory and opens a source file *'activity.csv'*. The date filed is then converted into R's Date format.
+
+```{r,echo = TRUE}
+library(dplyr); library(ggplot2)
+```
+
+```{r,echo = TRUE}
+# Enter your working directory path below...
+wd <- "~/Coursera/5- Reproducible Research/Projects/A1/"
+setwd(wd)
+activity <- tbl_df(read.csv("activity.csv", na.strings="NA", colClasses = NA, quote = "\"", 
+                           stringsAsFactors=FALSE))
+# Transforming the date field into the Date format
+activity <- transform(activity, date = as.Date(date))
+```
+
+The following histogram represents the number of steps taken per day (*missing values were ignored for this calculation*).
+
+```{r, echo=TRUE}
+sum_tb <- group_by(activity, date) %>%
+summarize(day_steps = sum(steps))
+hist(sum_tb$day_steps, main = "Total steps taken daily", xlab = "Daily Steps", col = "green")
+```
+
+The following code calculates mean and median total number of steps taken per day:
+```{r, echo=TRUE}
+initmn <- mean(sum_tb$day_steps,na.rm=TRUE)
+initmd <- median(sum_tb$day_steps,na.rm=TRUE)
+```
+
+The mean and median of the total number of steps taken per day are __`r as.character(round(initmn,0))`__ and __`r as.character(round(initmd,0))`__ respectively.
+
+
+###The average daily activity pattern
+is depicted in the following time series plot of the 5-minute interval (*x-axis*) and the average number of steps taken, averaged across all days (*y-axis*)...
+```{r, echo=TRUE}
+sum_int <- na.omit(activity) %>%
+  group_by(interval) %>%
+  summarize(avg_steps = mean(steps))
+ggplot(sum_int, aes(interval, avg_steps)) + geom_line()
+```
+
+
+###The average daily maximum steps per inrval
+```{r, echo=TRUE}
+maxsteps <- max(sum_int$avg_steps, na.rm=T); print(maxsteps)
+maxint <- sum_int[sum_int$avg_steps == maxsteps,1]; print(maxint)
+```
+
+On average, 5-minute interval '__`r as.character(maxint)`__' contains __`r as.character(round(maxsteps,0))`__ steps, which is the highes number of steps per time interval across all the days in the dataset.
+
+
+###Imputing missing values(coded as NA).
+
+The missing values in the dataset initially were populated with 'NA' as shown in the example below...
+
+```{r, echo=TRUE}
+ex <- head(activity,5)
+print(ex, type = "html")
+# Counting rows with missing values
+msn <- nrow(activity[!complete.cases(activity),]); print(msn)
+```
+
+In the source dataset *"activity"*, consisting of *`r as.character(nrow(activity))`* rows and *`r as.character(ncol(activity))`* columns,  there are **`r as.character(msn)`** rows with the missing values. 
+
+The following code converts (fills) the missing values into zeros.
+
+```{r, echo=TRUE}
+# filling in all of the missing values in the dataset with 0s
+complDT <- tbl_df(activity)
+complDT$steps[(is.na(complDT$steps))] <- 0
+#displaying the sample rows...
+print(head(complDT,5), type = "html")
+```
+
+As seen in the latest example, the NAs are now replaced with zeros and the new dataset **"complDT"** is created with *`r as.character(nrow(complDT))`* rows and *`r as.character(ncol(complDT))`* columns -- same as our initial dataset *"activity"*.
+
+The new calculation of the average daily steps taken is depicted in the histogram below:
+
+```{r, echo=TRUE}
+#a histogram of the total number of steps taken each day
+sum_tb_CM <- group_by(complDT, date) %>%
+  summarize(day_steps = sum(steps)) 
+hist(sum_tb_CM$day_steps, main = "Total steps taken daily", xlab = "Daily Steps", col = "green")
+```
+
+The new *mean* and *median* daily steps taken are calculated as follows using the newly created dataset *"comlDT"*
+
+```{r, echo=TRUE}
+#mean total number of steps taken per day
+clnAVG <- round(mean(sum_tb_CM$day_steps),0); print(clnAVG)
+# median total number of steps taken per day
+clnMED <- round(median(sum_tb_CM$day_steps),0); print(clnMED)
+```
+
+Those values are *`r as.character(clnAVG)`* for the new mean and *`r as.character(clnMED)`*  for the new median.
+
+Now, we will calculate the impact of the missing values on the new values of mean and median total daily numbers of the steps taken...
+
+```{r, echo=TRUE}
+#The impact of imputing missing data on the mean of the total daily number of steps
+varmn <- round(initmn - clnAVG, 0); print(varmn)
+#The impact of imputing missing data on the median of the total daily number of steps
+varmd <- round(initmd - clnMED, 0); print(varmd)
+```
+
+That impact is *`r as.character(varmn)`* steps for the mean and *`r as.character(varmd)`* -- for the median.
+
+
+### The differences in activity patterns between weekdays and weekends
+
+The code below creates a new two-level factor variable  with the values "weekday" and "weekend" 
+
+```{r, echo=TRUE}
+# Creating a new factor variable 'wkdy' in the dataset with "weekday" values
+sum_tb_dt <- tbl_df(mutate(complDT, wkdnm = weekdays(date), wkdy = "weekday"))
+# Assigning value "weekend" where a given date is the weekend day
+sum_tb_dt[which(sum_tb_dt$wkdnm =="Sunday" | sum_tb_dt$wkdnm == "Saturday"), c("wkdy")] <- "weekend"
+# Preparing a new table for the newly created variable 'wkdy' to be used as a factor in the plot
+sum_tb_dt <- transform(sum_tb_dt, wkdy = as.factor(wkdy)) %>%
+  group_by(interval, wkdy) %>%
+  summarize(avg_steps = mean(steps))
+head(sum_tb_dt,5)
+```
+
+####Constructing a time-series panel plot 
+of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis).
+
+```{r, echo=TRUE}
+g <- ggplot(sum_tb_dt, aes(interval, avg_steps)) 
+g + geom_line() + facet_grid(wkdy ~ .) + xlab("5-minute intervals") + ylab("AVG steps taken")
+```
+
+
