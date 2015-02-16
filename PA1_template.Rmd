@@ -147,4 +147,6 @@ g <- ggplot(sum_tb_dt, aes(interval, avg_steps))
 g + geom_line() + facet_grid(wkdy ~ .) + xlab("5-minute intervals") + ylab("AVG steps taken")
 ```
 
-
+output:
+  md_document:
+    variant: "markdown_github"
