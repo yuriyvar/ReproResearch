@@ -19,7 +19,6 @@ The code below first loads the packages 'dplyr' and 'ggplot2' that are needed fo
 ```{r,echo = TRUE}
 library(dplyr); library(ggplot2)
 ```
-
 ```{r,echo = TRUE}
 # Enter your working directory path below...
 wd <- "~/Coursera/5- Reproducible Research/Projects/A1/"
